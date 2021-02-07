@@ -12,13 +12,14 @@ def pca9685_addr(a5=0, a4=0, a3=0, a2=0, a1=0, a0=0) -> int:
 
 
 class PCA9685ServoCtrl(object):
-    _REG_ADDR_MODE1 = 0x00
-    _REG_ADDR_LED0_OFF_L = 0x08
-    _REG_ADDR_LED1_OFF_L = 0x0C
-    _REG_ADDR_PRE_SCALE = 0xFE
-    _REG_LED_ADDR_SIZE = _REG_ADDR_LED1_OFF_L - _REG_ADDR_LED0_OFF_L
-    _REG_FLAG_MODE1_RESET = 1 << 7
-    _REG_FLAG_MODE1_AI = 1 << 5
+    _REG_ADDR_MODE1: int = 0x00
+    _REG_ADDR_LED0_OFF_L: int = 0x08
+    _REG_ADDR_LED1_OFF_L: int = 0x0C
+    _REG_ADDR_PRE_SCALE: int = 0xFE
+    _REG_LED_ADDR_SIZE: int = _REG_ADDR_LED1_OFF_L - _REG_ADDR_LED0_OFF_L
+    _MODE1_RESET: int = 1 << 7
+    _MODE1_AI: int = 1 << 5
+    _MODE1_SLEEP: int = 1 << 4
 
     def __init__(self, i2c: I2C, addr: int):
         self._addr: int = addr
@@ -42,10 +43,12 @@ class PCA9685ServoCtrl(object):
         else:
             print("Device I2C addr:", self._addr, " not detected")
 
-        self._i2c.writeto_mem(self._addr, self._REG_ADDR_MODE1, self._REG_FLAG_MODE1_AI.to_bytes(1, 'little'))
-        self._i2c.writeto_mem(self._addr, self._REG_ADDR_PRE_SCALE, self._pre_scale().to_bytes(1, 'little'))
         self._i2c.writeto_mem(self._addr, self._REG_ADDR_MODE1,
-                              (self._REG_FLAG_MODE1_AI + self._REG_FLAG_MODE1_RESET).to_bytes(1, 'little'))
+                              (self._MODE1_AI + self._MODE1_SLEEP).to_bytes(1, 'little'))
+        self._i2c.writeto_mem(self._addr, self._REG_ADDR_PRE_SCALE,
+                              self._pre_scale().to_bytes(1, 'little'))
+        self._i2c.writeto_mem(self._addr, self._REG_ADDR_MODE1,
+                              (self._MODE1_AI + self._MODE1_RESET).to_bytes(1, 'little'))
 
     def channel(self, channel_id):
         return PCA9685Channel(self, channel_id)
