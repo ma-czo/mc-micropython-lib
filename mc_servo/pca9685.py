@@ -32,7 +32,7 @@ class PCA9685ServoCtrl(object):
     def _pre_scale(self) -> int:
         return int((self._clock_hz * self._period_us / (1e6 * self._pwm_count_max)) - 1)
 
-    def setup(self, period_us: int = 2000, min_pulse_us: int = 1000, max_pulse_us: int = 2000):
+    def setup(self, period_us: int = 20000, min_pulse_us: int = 1000, max_pulse_us: int = 2000):
 
         self._period_us = period_us
         self.min_pulse_us = min_pulse_us
