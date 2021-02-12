@@ -19,9 +19,20 @@ def pca9685_demo():
     right_arm = servo_ctrl.servo(0)
     right_arm.set_percent(0)
     time.sleep_ms(1000)
-    right_arm.set_percent(50)
+    right_arm.set_percent(50, 1000)
     time.sleep_ms(1000)
-    right_arm.set_percent(100)
+    right_arm.set_percent(100, 4000)
+    time.sleep_ms(1000)
+    right_arm.set_percent(75, 1000)
+    right_arm.set_percent(50, 500)
+    right_arm.set_percent(25, 250)
+    right_arm.set_percent(0, 0)
+
+    right_arm.set_angle(0, 500)
+    right_arm.set_angle(90, 2500)
+    right_arm.set_angle(-90, 1000)
+
+
 
 
 if __name__ == '__main__':

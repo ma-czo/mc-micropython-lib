@@ -1,4 +1,5 @@
 from machine import I2C
+import utime
 
 
 def addr_pca9685(a5=0, a4=0, a3=0, a2=0, a1=0, a0=0):
@@ -21,6 +22,7 @@ class ServoCtrlPCA9685(object):
         self._period_us: int = 20000
         self._min_pulse_us: int = 1000
         self._max_pulse_us: int = 2000
+        self.actual_values: [int] = [0] * 16
 
     def _prescaler(self) -> int:
         return int((self._clock_hz * self._period_us / (1e6 * self._count_max)) - 1)
@@ -46,8 +48,12 @@ class ServoCtrlPCA9685(object):
         duration_us = max(duration_us, self._min_pulse_us)
         return int(self._count_max * duration_us / self._period_us)
 
-    def set_value(self, index: int, value: int):
-        self._i2c.writeto_mem(self._addr, index * 4 + 8, int(value).to_bytes(2, 'little'))
+    def increment_value(self, channel: int, change: int):
+        self.set_value(channel, self.actual_values[channel] + change)
+
+    def set_value(self, channel: int, value: int):
+        self.actual_values[channel] = value
+        self._i2c.writeto_mem(self._addr, channel * 4 + 8, int(value).to_bytes(2, 'little'))
 
 
 class ServoPCA9685(object):
@@ -55,13 +61,22 @@ class ServoPCA9685(object):
     def __init__(self, ctrl: ServoCtrlPCA9685, index: int):
         self._ctrl = ctrl
         self._index = index
+        self._step_duration_ms: int = 20
 
-    def set_pulse_us(self, duration_us: int):
-        self._ctrl.set_value(self._index, self._ctrl.duration2count(duration_us))
+    def set_pulse_us(self, pulse_duration_us: int, change_duration_ms: int = 0):
+        target_value = self._ctrl.duration2count(pulse_duration_us)
+        step_numbers = round(change_duration_ms / self._step_duration_ms)
+        if step_numbers > 0:
+            step_value = round((target_value - self._ctrl.actual_values[self._index]) / step_numbers)
+            while step_numbers > 0:
+                step_numbers -= 1
+                self._ctrl.increment_value(self._index, step_value)
+                utime.sleep_ms(self._step_duration_ms)
+        self._ctrl.set_value(self._index, target_value)
 
-    def set_percent(self, percent: float):
+    def set_percent(self, percent: float, change_duration_ms: int = 0):
         duration = self._ctrl._min_pulse_us + percent / 100 * (self._ctrl._max_pulse_us - self._ctrl._min_pulse_us)
-        self.set_pulse_us(int(duration))
+        self.set_pulse_us(int(duration), change_duration_ms)
 
-    def set_angle(self, angle: float):
-        self.set_percent((angle + 90) / 180 * 100)
+    def set_angle(self, angle: float, change_duration_ms: int = 0):
+        self.set_percent((angle + 90.0) / 180 * 100, change_duration_ms)
